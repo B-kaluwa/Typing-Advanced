@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TypeFlow — Advanced Typing Speed Test</title>
+  <meta name="description" content="Visually-stunning, accessible typing test with multiple modes, history, leaderboard, settings, user accounts, and PWA-friendly structure." />
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg: #0f1724; /* dark navy */
+      --card: #0b1220;
+      --muted: #94a3b8;
+      --accent: #22c1c3; /* teal */
+      --accent-2: #6dd3ff;
+      --glass: rgba(255,255,255,0.04);
+      --radius: 14px;
+      --gap: 16px;
+      --maxw: 1100px;
+    }
+    /* Light theme variables -- toggled in .light on body */
+    body{font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;color:var(--accent-2);background:linear-gradient(180deg,#071226 0%, #071a2a 60%);margin:0;min-height:100vh}
+    body.light{--bg:#f6f8fb;--card:#ffffff;--muted:#6b7280;--accent:#0b76a8;--accent-2:#0b76a8;color:#073b4c;background:linear-gradient(180deg,#f8fafc 0%, #f1f5f9 100%)}
+    .app{max-width:var(--maxw);margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{margin:0;font-size:1.4rem;color:var(--accent-2)}
+    p.lead{margin:6px 0 18px;color:var(--muted)}
+
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+    @media (max-width:980px){.grid{grid-template-columns:1fr}}
+
+    /* Card */
+    .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    body.light .card{box-shadow:0 6px 18px rgba(11,76,138,0.06)}
+
+    /* Controls */
+    .controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    select,input[type=number],.btn{padding:10px 12px;border-radius:10px;border:none;font-weight:600}
+    select, input[type=number]{background:var(--glass);color:var(--accent-2)}
+    .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#042;cursor:pointer}
+    .btn.ghost{background:transparent;border:1px solid var(--glass);color:var(--accent-2)}
+
+    /* Typing area */
+    .test-area{margin-top:12px}
+    .text-display{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:16px;border-radius:10px;min-height:140px;font-size:1.05rem;line-height:1.6;color:#e6f7fb}
+    .text-display .char{white-space:pre-wrap}
+    .char.correct{color:#b6f7e0}
+    .char.incorrect{background:rgba(255,80,80,0.12);color:#ffcccb}
+    .char.current{border-bottom:2px solid var(--accent);}
+    textarea#input{width:100%;height:100px;margin-top:10px;padding:12px;border-radius:10px;border:0;background:transparent;color:var(--accent-2);resize:none;font-family:inherit}
+
+    /* Metrics */
+    .metrics{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+    .metric{background:linear-gradient(90deg,rgba(255,255,255,0.02),transparent);padding:10px 12px;border-radius:10px;min-width:120px;text-align:center}
+    .metric strong{display:block;font-size:1.1rem}
+
+    /* Canvas sparkline */
+    canvas.spark{width:100%;height:60px;background:transparent}
+
+    /* History & Leaderboard */
+    .history-list{max-height:240px;overflow:auto;margin-top:8px}
+    table{width:100%;border-collapse:collapse;color:var(--accent-2)}
+    th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.03);text-align:left}
+
+    /* Settings */
+    .settings{display:flex;flex-direction:column;gap:8px}
+    label{font-size:0.95rem;color:var(--muted)}
+
+    /* Preloader & countdown */
+    #preloader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999;background:linear-gradient(180deg, #041226, rgba(4,10,20,0.6));color:#eef9fb}
+    .typing-anim{display:flex;gap:6px;align-items:flex-end}
+    .key{width:22px;height:28px;border-radius:4px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;transform:translateY(0);animation:press 0.6s infinite}
+    .key:nth-child(2){animation-delay:0.12s}
+    .key:nth-child(3){animation-delay:0.24s}
+    @keyframes press{0%{transform:translateY(0)}50%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+
+    .countdown{font-size:2.4rem;font-weight:700}
+
+    /* small foot */
+    footer{margin-top:26px;color:var(--muted);text-align:center;font-size:.9rem}
+
+  </style>
+</head>
+<body>
+  <!-- Preloader -->
+  <div id="preloader" aria-hidden="false">
+    <div style="text-align:center">
+      <div class="typing-anim" aria-hidden="true">
+        <div class="key">A</div><div class="key">S</div><div class="key">D</div>
+      </div>
+      <div style="margin-top:12px">Preparing your typing environment...</div>
+    </div>
+  </div>
+
+  <div class="app">
+    <header>
+      <div class="logo">TF</div>
+      <div>
+        <h1>TypeFlow</h1>
+        <p class="lead">Multi-mode typing test · live metrics · history · leaderboard · settings</p>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="btn ghost" id="toggleTheme" aria-pressed="false">Toggle Theme</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <div class="controls">
+          <label>
+            Mode
+            <select id="modeSelect" aria-label="Choose mode">
+              <option value="time">Time</option>
+              <option value="words">Words</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+
+          <label id="timeOptions">
+            Time
+            <select id="timeSelect">
+              <option value="15">15s</option>
+              <option value="30">30s</option>
+              <option value="60">1m</option>
+              <option value="180">3m</option>
+              <option value="300">5m</option>
+            </select>
+          </label>
+
+          <label id="wordOptions" style="display:none">
+            Words
+            <select id="wordSelect">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+
+          <label id="customOptions" style="display:none">
+            Custom (seconds)
+            <input type="number" id="customInput" min="5" max="3600" value="120" />
+          </label>
+
+          <button class="btn" id="startBtn">Start</button>
+          <button class="btn ghost" id="pauseBtn" disabled>Pause</button>
+          <button class="btn ghost" id="resetBtn">Reset</button>
+        </div>
+
+        <div class="test-area">
+          <div id="countdownEl" class="countdown" style="display:none;text-align:center"></div>
+          <div id="textDisplay" class="text-display" aria-live="polite"></div>
+          <textarea id="input" aria-label="Type here" disabled placeholder="Your typing will appear here... (or click Start)"></textarea>
+
+          <div class="metrics">
+            <div class="metric"><div class="muted">WPM</div><strong id="wpm">0</strong></div>
+            <div class="metric"><div class="muted">Accuracy</div><strong id="acc">0%</strong></div>
+            <div class="metric"><div class="muted">Correct</div><strong id="correctChars">0</strong></div>
+            <div class="metric"><div class="muted">Incorrect</div><strong id="incorrectChars">0</strong></div>
+          </div>
+
+          <canvas id="wpmChart" class="spark" aria-hidden="true"></canvas>
+        </div>
+      </section>
+
+      <aside>
+        <div class="card">
+          <h3>History</h3>
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+            <div class="muted">Recent runs</div>
+            <div>
+              <button class="btn ghost" id="clearHistory">Clear</button>
+            </div>
+          </div>
+          <div class="history-list">
+            <table id="historyTable" aria-live="polite">
+              <thead><tr><th>Date</th><th>Mode</th><th>WPM</th><th>Acc</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3>Leaderboard</h3>
+          <ol id="leaderboard"></ol>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3>Settings</h3>
+          <div class="settings">
+            <label><input type="checkbox" id="soundToggle" /> Error sound</label>
+            <label><input type="checkbox" id="realtimeHighlight" checked/> Real-time highlighting</label>
+            <label><input type="checkbox" id="countdownToggle" checked/> Countdown before start</label>
+            <label>Font Size <input type="range" id="fontSize" min="14" max="20" value="16"/></label>
+            <button class="btn" id="exportHistory">Export History</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3>User</h3>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input id="username" placeholder="Name" style="flex:1;padding:8px;border-radius:8px;border:0;background:transparent;color:var(--accent-2)"/>
+            <button class="btn" id="saveUser">Save</button>
+          </div>
+          <div class="muted" style="margin-top:8px">Logged as <strong id="currentUser">Guest</strong></div>
+        </div>
+
+      </aside>
+    </main>
+
+    <footer>
+      <div class="muted">TypeFlow · Advanced typing test prototype • Local-only demo. Export/Import and PWA features can be added on request.</div>
+    </footer>
+  </div>
+
+  <script>
+    /*************************************************************************
+      TypeFlow - core JS
+      - Implements multiple modes, dynamic paragraphs, metrics, history, leaderboard
+      - Light-weight and dependency-free
+    *************************************************************************/
+
+    // ---------- Sample paragraphs & fun facts stored locally ----------
+    const PARAGRAPHS = {
+      short: [
+        "The quick brown fox jumps over the lazy dog.",
+        "Typing tests improve speed and accuracy with consistent practice.",
+        "Practice daily to see measurable improvements in your words per minute."
+      ],
+      medium: [
+        "Consistent practice with targeted exercises helps build muscle memory and improves typing speed over time. Focus on accuracy first and speed will follow.",
+        "Typing is a combination of rhythm, finger placement, and cognitive prediction. Trainers often recommend short daily drills to build fluency."
+      ],
+      long: [
+        "A well-structured typing test should present varied vocabulary and punctuation to closely mimic real-world writing tasks. This helps users develop accuracy across a range of characters, including numbers and symbols.",
+        "Professional typists benefit from timed drills, mixed content, and occasional focus on weak letter pairs. Tracking historical results helps identify stagnation and celebrate progress."
+      ]
+    };
+    const FUN_FACTS = [
+      "Touch-typing was patented in the 1870s for typewriters.",
+      "Average typing speed for adults is around 40 WPM.",
+      "Regular practice of 10–15 minutes per day improves speed faster than occasional long sessions."
+    ];
+
+    // ---------- DOM elements ----------
+    const preloader = document.getElementById('preloader');
+    const modeSelect = document.getElementById('modeSelect');
+    const timeOptions = document.getElementById('timeOptions');
+    const wordOptions = document.getElementById('wordOptions');
+    const customOptions = document.getElementById('customOptions');
+    const timeSelect = document.getElementById('timeSelect');
+    const wordSelect = document.getElementById('wordSelect');
+    const customInput = document.getElementById('customInput');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const textDisplay = document.getElementById('textDisplay');
+    const input = document.getElementById('input');
+    const wpmEl = document.getElementById('wpm');
+    const accEl = document.getElementById('acc');
+    const correctCharsEl = document.getElementById('correctChars');
+    const incorrectCharsEl = document.getElementById('incorrectChars');
+    const historyTbody = document.querySelector('#historyTable tbody');
+    const leaderboardEl = document.getElementById('leaderboard');
+    const clearHistoryBtn = document.getElementById('clearHistory');
+    const soundToggle = document.getElementById('soundToggle');
+    const realtimeHighlight = document.getElementById('realtimeHighlight');
+    const countdownToggle = document.getElementById('countdownToggle');
+    const countdownEl = document.getElementById('countdownEl');
+    const toggleTheme = document.getElementById('toggleTheme');
+    const fontSize = document.getElementById('fontSize');
+    const exportHistory = document.getElementById('exportHistory');
+    const usernameInput = document.getElementById('username');
+    const saveUserBtn = document.getElementById('saveUser');
+    const currentUserEl = document.getElementById('currentUser');
+
+    // ---------- App state ----------
+    let state = {
+      running: false,
+      paused: false,
+      startTime: null,
+      elapsed: 0,
+      timeLimit: 60,
+      wordsLimit: null,
+      mode: 'time',
+      chars: [], // array of char objects {c, status:'untyped'|'correct'|'incorrect'}
+      index: 0,
+      correct:0,incorrect:0,
+      wpmHistory: []
+    };
+
+    // ---------- Utilities ----------
+    function randChoice(arr){return arr[Math.floor(Math.random()*arr.length)];}
+    function now(){return Date.now();}
+
+    // ---------- Theme & Settings ----------
+    function loadSettings(){
+      const theme = localStorage.getItem('tf:theme');
+      if(theme==='light') document.body.classList.add('light');
+      const sound = localStorage.getItem('tf:sound'); if(sound==='true') soundToggle.checked=true;
+      const user = localStorage.getItem('tf:user'); if(user){currentUserEl.textContent=user; usernameInput.value = user}
+      const fs = localStorage.getItem('tf:fontsize'); if(fs) document.documentElement.style.setProperty('--font-size', fs);
+    }
+    toggleTheme.addEventListener('click', ()=>{
+      document.body.classList.toggle('light');
+      const isLight = document.body.classList.contains('light');
+      localStorage.setItem('tf:theme', isLight ? 'light' : 'dark');
+    });
+    saveUserBtn.addEventListener('click', ()=>{localStorage.setItem('tf:user', usernameInput.value || 'Guest'); currentUserEl.textContent = usernameInput.value || 'Guest';});
+    fontSize.addEventListener('input',(e)=>{document.body.style.fontSize = e.target.value+'px'; localStorage.setItem('tf:fontsize', e.target.value)});
+
+    // ---------- Paragraph selection logic ----------
+    function buildParagraph(mode){
+      // choose length based on mode/time
+      let pool = PARAGRAPHS.medium;
+      if(mode==='time'){
+        const t = state.timeLimit;
+        if(t<=30) pool = PARAGRAPHS.short;
+        else if(t<=180) pool = PARAGRAPHS.medium; else pool = PARAGRAPHS.long;
+      } else if(mode==='words'){
+        const w = state.wordsLimit || 25;
+        if(w<=15) pool = PARAGRAPHS.short; else if(w<=50) pool = PARAGRAPHS.medium; else pool = PARAGRAPHS.long;
+      } else pool = PARAGRAPHS.medium;
+
+      let text = randChoice(pool);
+      // if words mode, extend or truncate to desired words
+      if(state.mode==='words' && state.wordsLimit){
+        const words = text.split(/\s+/);
+        if(words.length < state.wordsLimit){
+          // repeat sentences until reach
+          while(words.length < state.wordsLimit){
+            const extra = randChoice(pool).split(/\s+/);
+            words.push(...extra);
+            if(words.length>state.wordsLimit) words.length = state.wordsLimit;
+          }
+          text = words.join(' ');
+        } else if(words.length > state.wordsLimit){
+          text = words.slice(0,state.wordsLimit).join(' ');
+        }
+      }
+      return text;
+    }
+
+    function renderText(text){
+      state.chars = text.split('').map(c=>({c, status:'untyped'}));
+      state.index = 0; state.correct=0; state.incorrect=0;
+      textDisplay.innerHTML = '';
+      state.chars.forEach((ch,i)=>{
+        const span = document.createElement('span'); span.className='char untyped'; span.textContent = ch.c; span.dataset.i=i; textDisplay.appendChild(span);
+      });
+      highlightCurrent();
+    }
+
+    function highlightCurrent(){
+      textDisplay.querySelectorAll('.char').forEach(s=>s.classList.remove('current'));
+      const el = textDisplay.querySelector(`.char[data-i='${state.index}']`);
+      if(el) el.classList.add('current');
+    }
+
+    // ---------- Start / Countdown / Timer ----------
+    function prepareAndStart(){
+      // set mode and limits
+      state.mode = modeSelect.value;
+      if(state.mode==='time') state.timeLimit = Number(timeSelect.value);
+      if(state.mode==='words') state.wordsLimit = Number(wordSelect.value);
+      if(state.mode==='custom') state.timeLimit = Number(customInput.value);
+
+      // build paragraph
+      const text = buildParagraph(state.mode);
+      renderText(text);
+      input.value=''; input.disabled=true;
+
+      // countdown if enabled
+      if(countdownToggle.checked){
+        let c = 3; countdownEl.style.display='block'; countdownEl.textContent = c; startBtn.disabled=true;
+        const intr = setInterval(()=>{c--; if(c>0) countdownEl.textContent=c; else {clearInterval(intr); countdownEl.style.display='none'; startRun();}},1000);
+      } else startRun();
+    }
+
+    function startRun(){
+      state.running=true; state.paused=false; state.startTime = now(); state.elapsed = 0; startBtn.disabled=true; pauseBtn.disabled=false; input.disabled=false; input.focus();
+      // metrics reset
+      updateMetrics(); state.wpmHistory=[]; drawSpark();
+      // start tick
+      tickInterval = setInterval(tick,250);
+    }
+
+    function pauseRun(){ state.paused = true; input.disabled=true; pauseBtn.textContent='Resume'; }
+    function resumeRun(){ state.paused=false; input.disabled=false; input.focus(); pauseBtn.textContent='Pause'; }
+
+    function resetRun(){ state.running=false; state.paused=false; clearInterval(tickInterval); startBtn.disabled=false; pauseBtn.disabled=true; pauseBtn.textContent='Pause'; countdownEl.style.display='none'; input.value=''; input.disabled=true; textDisplay.innerHTML=''; updateMetrics(); }
+
+    startBtn.addEventListener('click', ()=>{ if(!state.running) prepareAndStart(); });
+    pauseBtn.addEventListener('click', ()=>{ if(!state.running) return; if(!state.paused) {pauseRun();} else {resumeRun();} });
+    resetBtn.addEventListener('click', resetRun);
+
+    // ---------- Input handling / real-time highlighting ----------
+    let tickInterval = null;
+    input.addEventListener('input', (e)=>{
+      if(!state.running || state.paused) return;
+      if(realtimeHighlight.checked) processInput();
+    });
+    input.addEventListener('keydown', (e)=>{
+      if(!state.running || state.paused) return;
+      // allow navigation keys etc.
+      if(e.key==='Tab'){ e.preventDefault(); }
+    });
+
+    function processInput(){
+      const value = input.value;
+      // mark characters
+      for(let i=0;i<state.chars.length;i++){
+        const ch = state.chars[i];
+        const typed = value[i] || '';
+        if(typed==='') { ch.status = (i<value.length ? 'incorrect' : 'untyped'); }
+        else if(typed === ch.c) { if(ch.status !== 'correct') { ch.status='correct'; } }
+        else { ch.status='incorrect'; }
+      }
+      // update counts
+      state.correct = state.chars.filter(c=>c.status==='correct').length;
+      state.incorrect = state.chars.filter(c=>c.status==='incorrect').length;
+      // reflect in DOM
+      state.chars.forEach((c,i)=>{
+        const el = textDisplay.querySelector(`.char[data-i='${i}']`);
+        el.classList.remove('correct','incorrect','untyped');
+        el.classList.add(c.status);
+      });
+      // update index
+      state.index = value.length;
+      highlightCurrent();
+      updateMetrics();
+    }
+
+    // ---------- Tick: update time-based progress & WPM history ----------
+    function tick(){
+      if(!state.running || state.paused) return;
+      state.elapsed = Math.floor((now() - state.startTime)/1000);
+      // compute metrics
+      const minutes = Math.max(1/60, state.elapsed/60);
+      const typedWords = input.value.trim().split(/\s+/).filter(Boolean).length;
+      const wpm = Math.round(typedWords / minutes);
+      state.wpmHistory.push(wpm);
+      drawSpark();
+      updateMetricsValues(wpm);
+
+      // end conditions
+      if(state.mode==='time' && state.elapsed >= state.timeLimit) finishRun(wpm);
+      if(state.mode==='words'){
+        if(input.value.trim().split(/\s+/).filter(Boolean).length >= state.wordsLimit) finishRun(wpm);
+      }
+    }
+
+    function updateMetricsValues(wpm){ wpmEl.textContent = wpm; accEl.textContent = state.chars.length ? Math.round((state.correct/state.chars.length)*100)+'%' : '0%'; correctCharsEl.textContent = state.correct; incorrectCharsEl.textContent = state.incorrect; }
+    function updateMetrics(){ updateMetricsValues(0); }
+
+    // ---------- Finish run ----------
+    function finishRun(finalWpm){
+      state.running=false; clearInterval(tickInterval); input.disabled=true; startBtn.disabled=false; pauseBtn.disabled=true;
+      // compute final accuracy
+      const accuracy = state.chars.length ? Math.round((state.correct/state.chars.length)*100) : 0;
+      // save to history
+      const rec = {date: new Date().toISOString(), mode: state.mode, wpm: finalWpm, acc: accuracy, user: localStorage.getItem('tf:user') || 'Guest'};
+      const hist = JSON.parse(localStorage.getItem('tf:history') || '[]'); hist.unshift(rec); localStorage.setItem('tf:history', JSON.stringify(hist.slice(0,200)));
+      populateHistory(); populateLeaderboard(); showResultsModal(rec);
+      // fun fact
+      setTimeout(()=>alert('Tip: '+randChoice(FUN_FACTS)),300);
+    }
+
+    // ---------- History & Leaderboard ----------
+    function populateHistory(){ const hist = JSON.parse(localStorage.getItem('tf:history') || '[]'); historyTbody.innerHTML=''; hist.forEach(h=>{ const tr = document.createElement('tr'); tr.innerHTML = `<td>${new Date(h.date).toLocaleString()}</td><td>${h.mode}</td><td>${h.wpm}</td><td>${h.acc}%</td>`; historyTbody.appendChild(tr); }); }
+    function populateLeaderboard(){ const hist = JSON.parse(localStorage.getItem('tf:history') || '[]'); const top = hist.sort((a,b)=>b.wpm-a.wpm).slice(0,5); leaderboardEl.innerHTML=''; top.forEach(t=>{ const li = document.createElement('li'); li.textContent = `${t.user || 'G'} — ${t.wpm} WPM (${t.acc}%)`; leaderboardEl.appendChild(li); }); }
+    clearHistoryBtn.addEventListener('click', ()=>{ localStorage.removeItem('tf:history'); populateHistory(); populateLeaderboard(); });
+    exportHistory.addEventListener('click', ()=>{ const data = localStorage.getItem('tf:history') || '[]'; const blob = new Blob([data], {type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='typeflow-history.json'; a.click(); URL.revokeObjectURL(url); });
+
+    // ---------- Simple results modal (alert-based for demo) ----------
+    function showResultsModal(rec){ alert(`Run complete — WPM: ${rec.wpm} — Acc: ${rec.acc}%`); }
+
+    // ---------- Simple sparkline drawing ----------
+    const canvas = document.getElementById('wpmChart'); const ctx = canvas.getContext('2d'); function resizeCanvas(){ canvas.width = canvas.clientWidth * devicePixelRatio; canvas.height = canvas.clientHeight * devicePixelRatio; ctx.scale(devicePixelRatio, devicePixelRatio); }
+    window.addEventListener('resize', ()=>{ resizeCanvas(); drawSpark(); }); resizeCanvas();
+    function drawSpark(){ if(!ctx) return; ctx.clearRect(0,0,canvas.width,canvas.height); const w = canvas.clientWidth; const h = canvas.clientHeight; const data = state.wpmHistory.slice(-Math.floor(w/10)); if(!data.length) return; const max = Math.max(...data); ctx.beginPath(); ctx.strokeStyle = 'rgba(173, 240, 230, 0.95)'; ctx.lineWidth=2; const step = w / (data.length-1 || 1); data.forEach((v,i)=>{ const x = i*step; const y = h - (v/max * h || 0); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke(); }
+
+    // ---------- Mode UI toggle ----------
+    modeSelect.addEventListener('change', ()=>{
+      const m = modeSelect.value; timeOptions.style.display = m==='time' ? 'inline-block' : 'none'; wordOptions.style.display = m==='words' ? 'inline-block' : 'none'; customOptions.style.display = m==='custom' ? 'inline-block' : 'none';
+    });
+
+    // ---------- Preloader hide ----------
+    window.addEventListener('load', ()=>{
+      setTimeout(()=>{ preloader.style.display='none'; preloader.setAttribute('aria-hidden','true'); }, 900); // brief display
+      loadSettings(); populateHistory(); populateLeaderboard();
+    });
+
+    // ---------- helper sound (toggleable) ----------
+    const beep = new Audio(); const bs = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA='; beep.src = bs; // tiny silent placeholder
+    function playError(){ if(soundToggle.checked) beep.play(); }
+
+    // Accessibility: focus outlines when tabbing
+    document.addEventListener('keydown', e=>{ if(e.key==='Tab') document.body.classList.add('show-focus'); });
+
+  </script>
+</body>
+</html>
